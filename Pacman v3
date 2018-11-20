@@ -1,0 +1,408 @@
+#include <iostream>
+#include <stdio.h>
+#include <windows.h>
+#include <string>
+#include <vector>
+#include <ctime>
+#include <cstdlib>
+#include <conio.h>
+
+using namespace std;
+
+const int ROW = 18;
+const int COL = 32;
+const int ENEMIES = 3; 
+
+
+char map[ROW][COL]; 
+
+char map_easy[ROW][COL] = {		
+	"+-----------------------------+",
+	"|                             |",
+	"| |##### ###         ## |   | |",
+	"|          ######  ########## |",
+	"|                             |",
+	"|# ### ####      ###   ##  ###|",
+	"|                             |",
+	"|          ######  ########## |",
+	"|                             |",
+	"| |##### ###         ## |   | |",
+	"|          ######  ######     |",
+	"|                             |",
+	"|# ### ####      ###   #######|",
+	"|                             |",
+	"| |##### ###         ##     | |",
+	"|          ######  ####   ### |",
+	"|                             |",
+	"+-----------------------------+"
+};
+
+char map_normal[ROW][COL] = {	
+	"+-----------------------------+",
+	"|  ||     |   #####   ||    | |",
+	"|                             |",
+	"|###   ##    ## #   #   |   | |",
+	"|                             |",
+	"|  ||     |   ## ##   ||    | |",
+	"|     ###  #     ||  #  ##  ##|",
+	"|###   ##    ####   #   |   | |",
+	"|                             |",
+	"| |  ### ###         ## |   | |",
+	"|     |     ######  ###   ####|",
+	"|  |     ##                   |",
+	"|# ### # ##   |   ###   #  ###|",
+	"|  |      |   #####   ||    | |",
+	"|                             |",
+	"|###   ##    ####   #   |   | |",
+	"|    |    ||     |    #   #   |",
+	"+-----------------------------+"
+};
+
+char map_hard[ROW][COL] = {		
+	"+-----------------------------+",
+	"|  ||   |  |   #####   ||    ||",
+	"|    ##             ###       |",
+	"|###   ##    ## #   #   |   | |",
+	"|    ##    ||      |||   #### |",
+	"|  ||     |   ## ##   ||    | |",
+	"|     ###  #     ||  #  ##  ##|",
+	"|###   ##    ####   #   |   | |",
+	"|   ||   ##       ####    ##  |",
+	"| |  ### ###         ## |   | |",
+	"|     |     ######  ###   ####|",
+	"|  |     ##     ||       ##   |",
+	"|# ### # ##   |   ###   #  ###|",
+	"|  |      |   #####   ||    | |",
+	"|   ##||      ||       ##     |",
+	"|###   ##    ####   #   |   | |",
+	"|    |    ||     |    #   #   |",
+	"+-----------------------------+"
+};
+
+void ShowMap() 
+{
+	for (int i = 0; i < 18; i++) 
+	{
+		cout << (string(map[i]) + "\n"); 
+	}
+}
+
+void setMap(char mapToSet[ROW][COL]) 
+{
+	for (int i = 0; i < 18; i++) 
+		for (int j = 0; j < 32; j++)
+		{
+			map[i][j] = mapToSet[i][j]; 
+		}
+}
+
+void gotoxy(short x, short y) 
+{
+	HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD position = { x, y };
+
+	SetConsoleCursorPosition(hStdout, position);
+}
+
+void setDots() 
+{
+
+	for (int i = 0; i < ROW; i++)
+		for (int j = 0; j < COL; j++) 
+			if (map[i][j] == ' ' && (rand() % 15) == 0) 
+			{
+				map[i][j] = '.'; 
+			}
+
+
+}
+
+void setEnemiesCords(int *ex, int *ey, int numOfEnemies) 
+{
+	for (int i = 0; i < numOfEnemies; i++) 
+	{
+		do { 
+			ex[i] = rand() % COL;
+			ey[i] = rand() % ROW;
+
+		} while (map[ey[i]][ex[i]] != ' ');
+
+	}
+
+}
+
+
+bool isEndOfGame() 
+{
+	bool result = true; 
+	for (int i = 0; i < ROW; i++)
+		for (int j = 0; j < COL; j++) 
+			if (map[i][j] == '.') 
+			{
+				result = false;
+			}
+
+
+	return result;
+}
+
+
+
+
+struct Point { 
+	int x;
+	int y;
+};
+
+
+void fill(int binaryMap[ROW][COL], int distanceArray[ROW][COL], int x, int y, int currentDistance) 
+{
+
+
+	distanceArray[x][y] = currentDistance;
+
+	if (x + 1 < ROW && binaryMap[x + 1][y] == 1 && (distanceArray[x + 1][y] == 0 || distanceArray[x + 1][y] > currentDistance + 1))
+		fill(binaryMap, distanceArray, x + 1, y, currentDistance + 1);
+	if (x - 1 >= 0 && binaryMap[x - 1][y] == 1 && (distanceArray[x - 1][y] == 0 || distanceArray[x - 1][y] > currentDistance + 1))
+		fill(binaryMap, distanceArray, x - 1, y, currentDistance + 1);
+	if (y + 1 < COL && binaryMap[x][y + 1] == 1 && (distanceArray[x][y + 1] == 0 || distanceArray[x][y + 1] > currentDistance + 1))
+		fill(binaryMap, distanceArray, x, y + 1, currentDistance + 1);
+	if (y - 1 >= 0 && binaryMap[x][y - 1] == 1 && (distanceArray[x][y - 1] == 0 || distanceArray[x][y - 1] > currentDistance + 1))
+		fill(binaryMap, distanceArray, x, y - 1, currentDistance + 1);
+
+}
+
+
+Point findNextStep(int tmp[ROW][COL], int startX, int startY, int x, int y) 
+{
+	int currentDist = tmp[x][y];
+	if (x + 1 < ROW && tmp[x + 1][y] == currentDist - 1)
+		if (x + 1 == startX && y == startY)
+			return Point{ x, y };
+		else
+			return findNextStep(tmp, startX, startY, x + 1, y);
+
+	else if (x - 1 >= 0 && tmp[x - 1][y] == currentDist - 1)
+		if (x - 1 == startX && y == startY)
+			return Point{ x, y };
+		else
+			return findNextStep(tmp, startX, startY, x - 1, y);
+
+	else if (y + 1 < COL && tmp[x][y + 1] == currentDist - 1)
+		if (x == startX && y + 1 == startY)
+			return Point{ x, y };
+		else
+			return findNextStep(tmp, startX, startY, x, y + 1);
+	else if (y - 1 >= 0 && tmp[x][y - 1] == currentDist - 1)
+		if (x == startX && y - 1 == startY)
+			return Point{ x, y };
+		else
+			return findNextStep(tmp, startX, startY, x, y - 1);
+
+
+}
+
+void mapToBinary(int array[ROW][COL]) 
+{
+	for (int i = 0; i < ROW; i++)
+		for (int j = 0; j < COL; j++)
+			if (map[i][j] == ' ' || map[i][j] == '.')
+				array[i][j] = 1;
+			else
+				array[i][j] = 0;
+
+}
+
+Point getNextStep(int binaryMap[ROW][COL], int ex, int ey, int x, int y) 
+{
+	int distanceArray[ROW][COL]; 
+	for (int i = 0; i < ROW; i++)
+		for (int j = 0; j < COL; j++)
+			distanceArray[i][j] = 0;
+
+	fill(binaryMap, distanceArray, ex, ey, 1); 
+
+	Point nextStep = findNextStep(distanceArray, ex, ey, x, y); 
+
+	return nextStep; 
+
+}
+
+
+
+int main()
+{
+
+
+	srand(time(0));
+
+	int x = 15; 
+	int y = 16; 
+
+
+
+
+
+	cout << "				Pacman by Adam Sliwinski\n";
+	cout << "														\n";
+	cout << "INSTRUKCJA:\n";
+	cout << "- Uzywaj strzalek (gora/dol/prawo/lewo) do poruszania sie\n";
+	cout << "- Zbierz wszystkie punkty i unikaj przeciwnikow\n";
+	cout << "- Wybierz poziom trudnosci poprzez wpisanie E, N lub H\n";
+	cout << "H -> Hard\nN -> Normal\nE -> Easy\n\nInput : ";
+
+
+	char level; 
+	cin >> level;
+
+	int speedmod; 
+
+
+	if (level == 'E')
+	{
+		speedmod = 3;
+		setMap(map_easy);
+	}
+	else if (level == 'N')
+	{
+		speedmod = 2;
+		setMap(map_normal);
+
+	}
+	else {
+		speedmod = 1;
+		setMap(map_hard);
+
+	}
+
+	setDots();
+
+
+	
+	int enemiesX[ENEMIES]; 
+	int enemiesY[ENEMIES];
+	int enemiesSpeeds[ENEMIES]; 
+
+
+	setEnemiesCords(enemiesX, enemiesY, ENEMIES);
+
+	for (int i = 0; i < ENEMIES; i++) 
+	{
+		enemiesSpeeds[i] = speedmod + rand() % 5; 
+	}
+
+
+	system("cls"); 
+	ShowMap();
+
+	int binaryMap[ROW][COL]; 
+	mapToBinary(binaryMap);
+
+	gotoxy(x, y);
+	cout << "C"; 
+
+	int frame = 0; 
+
+	int score = 0; 
+
+	_getch(); 
+
+	bool running = true; 
+
+	while (isEndOfGame() == false && running == true) { 
+		gotoxy(x, y); 
+		cout << " ";
+
+
+
+		if (GetAsyncKeyState(VK_UP)) { 
+			if (map[y - 1][x] == '.') {
+				y--; score++; map[y][x] = ' '; 
+			}
+			else
+				if (map[y - 1][x] == ' ') y--; 
+		}
+		if (GetAsyncKeyState(VK_DOWN)) {
+			if (map[y + 1][x] == '.') {
+				y++; score++; map[y][x] = ' ';
+			}
+			else
+				if (map[y + 1][x] == ' ') y++;
+		}
+		if (GetAsyncKeyState(VK_LEFT)) {
+			if (map[y][x - 1] == '.') { x--; score++; map[y][x] = ' '; }
+			else
+				if (map[y][x - 1] == ' ') x--;
+		}
+		if (GetAsyncKeyState(VK_RIGHT)) {
+			if (map[y][x + 1] == '.') {
+				x++; score++; map[y][x] = ' ';
+			}
+			else
+				if (map[y][x + 1] == ' ') x++;
+		}
+
+		
+
+		gotoxy(x, y);
+		cout << "C";
+
+		for (int i = 0; i < ENEMIES; i++) 
+		{
+			gotoxy(enemiesX[i], enemiesY[i]);
+			cout << " ";
+		}
+
+		
+		
+		
+		
+		
+
+		for (int i = 0; i < ENEMIES; i++) 
+			if (frame%enemiesSpeeds[i] == 0) 
+			{
+				Point p = getNextStep(binaryMap, enemiesY[i], enemiesX[i], y, x);
+
+				enemiesX[i] = p.y;
+				enemiesY[i] = p.x;
+
+				if (map[enemiesY[i]][enemiesX[i]] == '.') 
+					map[enemiesY[i]][enemiesX[i]] = ' ';
+			}
+		
+
+
+		for (int i = 0; i < ENEMIES; i++) 
+		{
+			gotoxy(enemiesX[i], enemiesY[i]);
+			cout << "Q";
+
+			if (enemiesX[i] == x && enemiesY[i] == y) 
+			{
+				running = false;
+			}
+		}
+
+		gotoxy(32, 18);
+		gotoxy(32, 1); cout << score;
+		Sleep(100); 
+		frame++; 
+	}
+
+	system("cls");
+
+	if (isEndOfGame() == true)
+	{
+		cout << "WYGRANA!\nLiczba punktow:" << score;
+	}
+
+	if (running == false)
+	{
+		cout << "Przegrana :(";
+	}
+
+	Sleep(3000); 
+
+
+}
